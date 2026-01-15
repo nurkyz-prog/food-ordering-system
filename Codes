@@ -18,3 +18,75 @@ class DatabaseConnection:
     def create_connection(self):
         from sqlalchemy import create_engine
         return create_engine('sqlite:///food_ordering.db')
+-------------------------------------
+# Database Model
+import pytest
+from flask import Flask
+from models import db, User, MenuItem, Order
+
+@pytest.fixture
+def test_app():
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    db.init_app(app)
+
+    with app.app_context():
+        db.create_all()
+        yield app, db
+-------------------------------------
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True)
+    password = db.Column(db.String(255))
+
+class MenuItem(db.Model):
+    __tablename__ = "menu_items"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    price = db.Column(db.Float)
+
+class Order(db.Model):
+    __tablename__ = "orders"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    status = db.Column(db.String(50))
+-------------------------------------
+# Jwt Security
+import jwt
+import datetime
+
+def create_jwt_token(user_id):
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+    }
+    return jwt.encode(payload, 'SECRET_KEY', algorithm='HS256')
+-------------------------------------
+# Error Handling
+import pytest
+from flask import Flask
+from error_handler import register_error_handlers
+
+@pytest.fixture
+def app():
+    app = Flask(__name__)
+    register_error_handlers(app)
+    return app
+-------------------------------------
+# Logging
+import logging
+
+def start_logging(log_file="app.log"):
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        force=True
+    )
+    logging.info("Application started successfully")
